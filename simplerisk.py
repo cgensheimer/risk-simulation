@@ -1,4 +1,7 @@
-
+from colorama import init as colorama_init
+from colorama import Fore
+from colorama import Style
+colorama_init()
 
 import random
 
@@ -36,9 +39,13 @@ def simulate_battle(num_attackers, num_defenders):
 
     return (num_attackers, num_defenders, difference)
 
-def user_input():
-    num_attackers = int(input("\nEnter number of attackers: "))
-    num_defenders = int(input("Enter number of defenders: "))
+def user_input(finalattackers, finaldefenders, win):
+    if win == False:
+        print(f"{Fore.BLACK}Current value is: " + str(finalattackers) + f", press enter to keep this value.{Style.RESET_ALL}")
+    num_attackers = int(input("Enter number of attackers: ") or finalattackers)
+    if win == False:
+        print(f"{Fore.BLACK}Current value is: " + str(finaldefenders) + f", press enter to keep this value.{Style.RESET_ALL}")
+    num_defenders = int(input("Enter number of defenders: ") or finaldefenders)
     if num_attackers <= 1:
         raise ValueError("Must have at least 2 attackers")
     if num_defenders <= 0:
@@ -46,21 +53,29 @@ def user_input():
     return (num_attackers, num_defenders)
 
 def main():
+    finalattackers = 0
+    finaldefenders = 0
+    win = False
     while True:
         try:
-            num_attackers, num_defenders = user_input()
+            num_attackers, num_defenders = user_input(finalattackers, finaldefenders, win)
         except ValueError as e:
             print(e)
             continue
         num_attackers, num_defenders, difference = simulate_battle(num_attackers, num_defenders)
         if num_attackers <= 1:
-            print("Defender wins with {} units remaining!".format(num_defenders))
+            print("Defender wins with {} units remaining!\n".format(num_defenders))
+            win = True
             continue
         if num_defenders == 0:
-            print("Attacker wins with {} units remaining!".format(num_attackers))
+            print("Attacker wins with {} units remaining!\n".format(num_attackers))
+            win = True
             continue
         else:
-            print("Attackers: {} ({}) Defenders: {} ({})".format(num_attackers, difference[0], num_defenders, difference[1]))
+            print(f"{Fore.RED}Attackers: {num_attackers} ({difference[0]}) Defenders: {num_defenders} ({difference[1]}){Style.RESET_ALL}\n")
+            win = False
+            finalattackers = num_attackers
+            finaldefenders = num_defenders
 
 if __name__ == "__main__":
     try:
