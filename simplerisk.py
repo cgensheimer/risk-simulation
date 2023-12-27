@@ -1,86 +1,98 @@
-from colorama import init as colorama_init
-from colorama import Fore
-from colorama import Style
+from colorama import init as colorama_init, Fore, Style
+import random
+import time
+import sys
+
 colorama_init()
 
-import random
-
-def simulate_battle(num_attackers, num_defenders):
-    """Simulates a battle between attackers and defenders in the game of Risk.
-    Follows the standard rules for rolling dice:
-    - Attackers roll up to 3 dice, defenders roll up to 2 dice
-    - For each pair of dice, the highest roller wins. If there is a tie, the defender wins.
-    - The loser removes one army for each loss.
-    
-    Returns:
-        tuple: a tuple containing the number of remaining attackers and defenders
-    """
+def simulate_battle(num_attackers, num_defenders, display_rolls=True):
     num_attack_dice = min(3, num_attackers - 1)
     num_defend_dice = min(2, num_defenders)
-    initial = (num_attackers, num_defenders)
-    
-    attack_rolls = [random.randint(1, 6) for _ in range(num_attack_dice)]
-    defend_rolls = [random.randint(1, 6) for _ in range(num_defend_dice)]
-    
-    attack_rolls.sort(reverse=True)
-    defend_rolls.sort(reverse=True)
-    
-    while len(attack_rolls) > 0 and len(defend_rolls) > 0:
-        if attack_rolls.pop(0) > defend_rolls.pop(0):
+
+    attack_rolls = sorted([random.randint(1, 6) for _ in range(num_attack_dice)], reverse=True)
+    defend_rolls = sorted([random.randint(1, 6) for _ in range(num_defend_dice)], reverse=True)
+
+    if display_rolls:
+        print(f"{Fore.GREEN}Attackers roll: {attack_rolls}{Style.RESET_ALL}")
+        print(f"{Fore.RED}Defenders roll: {defend_rolls}{Style.RESET_ALL}")
+
+    roll_results = []
+    while attack_rolls and defend_rolls:
+        attack_roll = attack_rolls.pop(0)
+        defend_roll = defend_rolls.pop(0)
+        roll_results.append((attack_roll, defend_roll))
+
+        if attack_roll > defend_roll:
             num_defenders -= 1
         else:
             num_attackers -= 1
-    
-    a_difference = num_attackers - initial[0]
-    a_difference = "-" + str(a_difference) if a_difference > 0 else str(a_difference)
-    d_difference = num_defenders - initial[1]
-    d_difference = "-" + str(d_difference) if d_difference > 0 else str(d_difference)
-    difference = (a_difference, d_difference)
 
-    return (num_attackers, num_defenders, difference)
+    return num_attackers, num_defenders, roll_results
 
-def user_input(finalattackers, finaldefenders, win):
-    if win == False:
-        print(f"{Fore.BLACK}Current value is: " + str(finalattackers) + f", press enter to keep this value.{Style.RESET_ALL}")
-    num_attackers = int(input("Enter number of attackers: ") or finalattackers)
-    if win == False:
-        print(f"{Fore.BLACK}Current value is: " + str(finaldefenders) + f", press enter to keep this value.{Style.RESET_ALL}")
-    num_defenders = int(input("Enter number of defenders: ") or finaldefenders)
+def user_input(finalattackers, finaldefenders):
+    print(f"{Fore.BLACK}Current attackers: {finalattackers}, Current defenders: {finaldefenders}{Style.RESET_ALL}")
+    attackers_input = input(f"{Fore.LIGHTCYAN_EX}Enter number of attackers (or 'go' to simulate until end, press Enter to keep {finalattackers}): {Style.RESET_ALL}").lower()
+    defenders_input = input(f"{Fore.LIGHTBLUE_EX}Enter number of defenders (or 'go' to simulate until end, press Enter to keep {finaldefenders}): {Style.RESET_ALL}").lower()
+
+    if attackers_input == "go" or defenders_input == "go":
+        return "go", "go"
+
+    num_attackers = int(attackers_input) if attackers_input else finalattackers
+    num_defenders = int(defenders_input) if defenders_input else finaldefenders
+
+    if num_attackers < 1 or num_defenders < 1:
+        raise ValueError("Invalid number of attackers or defenders.")
+
+    return num_attackers, num_defenders
+
+def loading_animation():
+    animation = "|/-\\"
+    for i in range(10):  # Number of iterations for the animation
+        time.sleep(0.1)  # Speed of animation
+        sys.stdout.write("\r" + animation[i % len(animation)])
+        sys.stdout.flush()
+    print("\rEnd of simulation!")
+
+def simulate_until_end(num_attackers, num_defenders):
+    all_roll_results = []
+    while num_attackers > 1 and num_defenders > 0:
+        num_attackers, num_defenders, roll_results = simulate_battle(num_attackers, num_defenders, display_rolls=False)
+        all_roll_results.extend(roll_results)
+
+    print("\nAll battle results:")
+    for result in all_roll_results:
+        print(f"Attacker: {result[0]}, Defender: {result[1]}")
+
+    return num_attackers, num_defenders
+
+def display_winner(num_attackers, num_defenders):
     if num_attackers <= 1:
-        raise ValueError("Must have at least 2 attackers")
-    if num_defenders <= 0:
-        raise ValueError("Must have at least 1 defender")
-    return (num_attackers, num_defenders)
+        print(f"{Fore.GREEN}Defender wins with {num_defenders} units remaining!{Style.RESET_ALL}\n")
+    else:
+        print(f"{Fore.RED}Attacker wins with {num_attackers} units remaining!{Style.RESET_ALL}\n")
 
 def main():
-    finalattackers = 0
-    finaldefenders = 0
-    win = False
-    while True:
-        try:
-            num_attackers, num_defenders = user_input(finalattackers, finaldefenders, win)
-        except ValueError as e:
-            print(e)
-            continue
-        num_attackers, num_defenders, difference = simulate_battle(num_attackers, num_defenders)
-        if num_attackers <= 1:
-            print("Defender wins with {} units remaining!\n".format(num_defenders))
-            win = True
-            continue
-        if num_defenders == 0:
-            print("Attacker wins with {} units remaining!\n".format(num_attackers))
-            win = True
-            continue
-        else:
-            print(f"{Fore.RED}Attackers: {num_attackers} ({difference[0]}) Defenders: {num_defenders} ({difference[1]}){Style.RESET_ALL}\n")
-            win = False
-            finalattackers = num_attackers
-            finaldefenders = num_defenders
-
-if __name__ == "__main__":
+    print("Risk Battle Simulator (Ctrl-C to exit)")
+    finalattackers, finaldefenders = 0, 0
     try:
-        print("Risk Battle Simulator (Ctrl-C to exit)")
-        main()
+        while True:
+            num_attackers, num_defenders = user_input(finalattackers, finaldefenders)
+
+            if num_attackers == "go" or num_defenders == "go":
+                loading_animation()
+                finalattackers, finaldefenders = simulate_until_end(finalattackers, finaldefenders)
+                display_winner(finalattackers, finaldefenders)
+            else:
+                finalattackers, finaldefenders, _ = simulate_battle(num_attackers, num_defenders)
+
+                if finalattackers <= 1 or finaldefenders == 0:
+                    display_winner(finalattackers, finaldefenders)
+                    finalattackers, finaldefenders = 0, 0
+                    continue
+
+                print(f"{Fore.YELLOW}Attackers: {finalattackers}, Defenders: {finaldefenders}{Style.RESET_ALL}\n")
     except KeyboardInterrupt:
         print("\nExiting...")
-        exit()
+
+if __name__ == "__main__":
+    main()
